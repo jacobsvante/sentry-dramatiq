@@ -31,4 +31,4 @@ sentry_sdk.init(
 
 ## Known limitations
 
-- `sentry_sdk.init()` has to be called before broker is initialized
+- `sentry_sdk.init()` has to be called before broker is initialized as the integration monkey patches `Broker.__init__`
