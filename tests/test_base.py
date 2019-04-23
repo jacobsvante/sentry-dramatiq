@@ -180,6 +180,6 @@ def test_that_message_data_is_added_as_request(broker, worker, capture_events):
     assert request_data["actor_name"] == "dummy_actor"
     assert request_data["args"] == [1, 0]
     assert request_data["kwargs"] == {}
-    assert request_data["options"] == {}
+    assert request_data["options"] == {'retries': 0}
     assert UUID(request_data["message_id"])
     assert isinstance(request_data['message_timestamp'], int)
