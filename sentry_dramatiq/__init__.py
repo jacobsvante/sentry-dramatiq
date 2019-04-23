@@ -14,10 +14,10 @@ from sentry_sdk.utils import (
 
 
 class DramatiqIntegration(Integration):
-    """Automatically integrates the current Dramatiq broker with Sentry
+    """Dramatiq integration for Sentry
 
-    If you use this, please make sure you call `sentry_sdk.init`
-    *before* initializing your broker, as it monkey patches `Broker.__init__`.
+    Please make sure that you call `sentry_sdk.init` *before* initializing
+    your broker, as it monkey patches `Broker.__init__`.
     """
 
     identifier = "dramatiq"

@@ -28,6 +28,10 @@ sentry_sdk.init(
 )
 ```
 
+## Features
+
+- Tags Sentry events with the message ID as `dramatiq_message_id`
+- Sends message info as request body to Sentry (utilizing the same truncation mechanism that Sentry's web integrations use. See [request_bodies in Sentry's docs](https://docs.sentry.io/error-reporting/configuration/?platform=python#request-bodies))
 
 ## Known limitations
 
