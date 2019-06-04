@@ -54,9 +54,9 @@ def _patch_dramatiq_broker():
             middleware = list(middleware)
 
         if integration is not None:
-            assert SentryMiddleware not in (m.__class__ for m in middleware),\
+            assert SentryProxyMiddleware not in (m.__class__ for m in middleware),\
                 "Sentry middleware must not be passed in manually to broker"
-            middleware.insert(0, SentryMiddleware())
+            middleware.insert(0, SentryProxyMiddleware())
 
         kw['middleware'] = middleware
         # raise Exception([args, kw])
@@ -75,9 +75,6 @@ class SentryMiddleware(Middleware):
 
     def before_process_message(self, broker, message):
         hub = Hub.current
-        integration = hub.get_integration(DramatiqIntegration)
-        if integration is None:
-            return
 
         message._scope_manager = hub.push_scope()
         message._scope_manager.__enter__()
@@ -86,15 +83,11 @@ class SentryMiddleware(Middleware):
             scope.transaction = message.actor_name
             scope.set_tag('dramatiq_message_id', message.message_id)
             scope.add_event_processor(
-                _make_message_event_processor(message, integration)
+                _make_message_event_processor(message)
             )
 
     def after_process_message(self, broker, message, *, result=None, exception=None):
         hub = Hub.current
-        integration = hub.get_integration(DramatiqIntegration)
-
-        if integration is None:
-            return
 
         try:
             if exception is not None:
@@ -108,7 +101,23 @@ class SentryMiddleware(Middleware):
             message._scope_manager.__exit__(None, None, None)
 
 
-def _make_message_event_processor(message, integration):
+class SentryProxyMiddleware(SentryMiddleware):
+    def _has_sentry_dramatiq_integration(self):
+        # type: () -> bool
+        hub = Hub.current
+        integration = hub.get_integration(DramatiqIntegration)
+        return integration is not None
+
+    def before_process_message(self, broker, message):
+        if self._has_sentry_dramatiq_integration():
+            super().before_process_message(broker, message)
+
+    def after_process_message(self, broker, message, *, result=None, exception=None):
+        if self._has_sentry_dramatiq_integration():
+            super().after_process_message(broker, message, result=result, exception=exception)
+
+
+def _make_message_event_processor(message):
     # type: (Message, DramatiqIntegration) -> Callable
 
     def inner(event, hint):
