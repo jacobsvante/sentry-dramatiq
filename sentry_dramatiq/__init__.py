@@ -141,8 +141,7 @@ class DramatiqMessageExtractor(object):
 
         content_length = self.content_length()
         contexts = event.setdefault("contexts", {})
-
-        request_info = event.setdefault("dramatiq", {})
+        request_info = contexts.setdefault("dramatiq", {})
         request_info['type'] = "dramatiq"
 
         bodies = client.options["request_bodies"]
