@@ -175,7 +175,7 @@ def test_that_message_data_is_added_as_request(broker, worker, capture_events):
     event, = events
 
     assert event["transaction"] == "dummy_actor"
-    request_data = event["request"]["data"]
+    request_data = event["contexts"]["dramatiq"]["data"]
     assert request_data["queue_name"] == "default"
     assert request_data["actor_name"] == "dummy_actor"
     assert request_data["args"] == [1, 0]

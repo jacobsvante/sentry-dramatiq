@@ -140,7 +140,9 @@ class DramatiqMessageExtractor(object):
         data = None  # type: Optional[Union[AnnotatedValue, Dict[str, Any]]]
 
         content_length = self.content_length()
-        request_info = event.setdefault("request", {})
+        contexts = event.setdefault("contexts", {})
+        request_info = contexts.setdefault("dramatiq", {})
+        request_info['type'] = "dramatiq"
 
         bodies = client.options["request_bodies"]
         if (
