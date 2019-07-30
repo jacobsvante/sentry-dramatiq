@@ -115,7 +115,6 @@ def _make_message_event_processor(message, integration):
         # type: (Dict[str, Any], Dict[str, Any]) -> Dict[str, Any]
         with capture_internal_exceptions():
             DramatiqMessageExtractor(message).extract_into_event(event)
-            event.setdefault("request", dict(message.asdict()))
 
         return event
 
