@@ -183,3 +183,19 @@ def test_that_message_data_is_added_as_request(broker, worker, capture_events):
     assert request_data["options"] == {'retries': 0}
     assert UUID(request_data["message_id"])
     assert isinstance(request_data['message_timestamp'], int)
+
+
+def test_that_scope_breadcrumbs_are_cleared(broker, worker, capture_events):
+    events = capture_events()
+
+    @dramatiq.actor(max_retries=0)
+    def dummy_actor(x, y):
+        return x / y
+
+    dummy_actor.send(1, 0)
+    broker.join(dummy_actor.queue_name)
+    worker.join()
+
+    event, = events
+
+    assert all(b['message'] != 'BREADCRUMB' for b in event['breadcrumbs'])
