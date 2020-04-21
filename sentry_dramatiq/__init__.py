@@ -96,8 +96,12 @@ class SentryMiddleware(Middleware):
         if integration is None:
             return
 
+        actor = broker.get_actor(message.actor_name)
+
         try:
-            if exception is not None:
+            if exception is not None and not (
+                actor.throws and isinstance(exception, actor.throws)
+            ):
                 event, hint = event_from_exception(
                     exception,
                     client_options=hub.client.options,
