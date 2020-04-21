@@ -183,3 +183,21 @@ def test_that_message_data_is_added_as_request(broker, worker, capture_events):
     assert request_data["options"] == {'retries': 0}
     assert UUID(request_data["message_id"])
     assert isinstance(request_data['message_timestamp'], int)
+
+
+def test_that_expected_exceptions_are_not_captured(broker, worker,
+                                                   capture_events):
+    events = capture_events()
+
+    class ExpectedException(Exception):
+        pass
+
+    @dramatiq.actor(max_retries=0, throws=ExpectedException)
+    def dummy_actor():
+        raise ExpectedException
+
+    dummy_actor.send()
+    broker.join(dummy_actor.queue_name)
+    worker.join()
+
+    assert events == []
