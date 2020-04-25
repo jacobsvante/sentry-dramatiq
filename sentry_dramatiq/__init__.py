@@ -43,7 +43,7 @@ def _patch_dramatiq_broker():
             # RedisBroker does not.
             if len(args) > 0:
                 assert len(args) < 2
-                middleware = None if args[0] is None else [args[0]]
+                middleware = None if args[0] is None else args[0]
                 args = []
             else:
                 middleware = None
