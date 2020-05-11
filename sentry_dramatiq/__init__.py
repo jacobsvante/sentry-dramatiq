@@ -97,10 +97,11 @@ class SentryMiddleware(Middleware):
             return
 
         actor = broker.get_actor(message.actor_name)
+        throws = message.options.get("throws") or actor.options.get("throws")
 
         try:
             if exception is not None and not (
-                actor.throws and isinstance(exception, actor.throws)
+                throws and isinstance(exception, throws)
             ):
                 event, hint = event_from_exception(
                     exception,
