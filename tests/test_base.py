@@ -201,3 +201,18 @@ def test_that_expected_exceptions_are_not_captured(broker, worker,
     worker.join()
 
     assert events == []
+
+
+def test_that_retry_exceptions_are_not_captured(broker, worker,
+                                               capture_events):
+    events = capture_events()
+
+    @dramatiq.actor(max_retries=2)
+    def dummy_actor():
+        raise dramatiq.errors.Retry('Retrying', delay=100)
+
+    dummy_actor.send()
+    broker.join(dummy_actor.queue_name)
+    worker.join()
+
+    assert events == []
