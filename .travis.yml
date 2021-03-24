@@ -15,12 +15,16 @@ matrix:
       dist: xenial
       env: TOX_ENV=py37,py37-dramatiq-1.3,py-dramatiq-1.4,py37-dramatiq-dev
 
-    - python: "3.8-dev"
+    - python: "3.8"
       dist: xenial
       env: TOX_ENV=py38,py38-dramatiq-1.3,py-dramatiq-1.4,py38-dramatiq-dev
 
+    - python: "3.9"
+      dist: xenial
+      env: TOX_ENV=py39,py39-dramatiq-dev
+
     - name: Linting
-      python: "3.6"
+      python: "3.9"
       env: TOX_ENV=lint
 
 install:
