@@ -83,6 +83,7 @@ class SentryMiddleware(Middleware):
         message._scope_manager.__enter__()
 
         with hub.configure_scope() as scope:
+            scope.clear_breadcrumbs()
             scope.transaction = message.actor_name
             scope.set_tag('dramatiq_message_id', message.message_id)
             scope.add_event_processor(

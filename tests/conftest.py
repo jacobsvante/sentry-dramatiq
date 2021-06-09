@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import subprocess
 
@@ -190,6 +191,7 @@ def broker(sentry_init):
     sentry_init(integrations=[DramatiqIntegration()])
     broker = StubBroker()
     broker.emit_after("process_boot")
+    logging.error('BREADCRUMB')  # Collected as breadcrumb out of task scope.
     dramatiq.set_broker(broker)
     yield broker
     broker.flush_all()
