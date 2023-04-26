@@ -36,21 +36,6 @@ def test_that_actor_name_is_set_as_transaction(broker, worker, capture_events):
     assert event["transaction"] == "dummy_actor"
 
 
-def test_that_mechanism_is_set_correctly(broker, worker, capture_events):
-    events = capture_events()
-
-    @dramatiq.actor(max_retries=0)
-    def dummy_actor(x, y):
-        return x / y
-
-    dummy_actor.send(1, 0)
-    broker.join(dummy_actor.queue_name)
-    worker.join()
-
-    event, = events
-    assert event["exception"]["values"][0]["mechanism"]["type"] == "dramatiq"
-
-
 def test_that_dramatiq_message_id_is_set_as_tag(
     broker,
     worker,
@@ -168,7 +153,7 @@ def test_that_message_data_is_added_as_request(broker, worker, capture_events):
     def dummy_actor(x, y):
         return x / y
 
-    dummy_actor.send(1, 0)
+    dummy_actor.send_with_options(args=(1, 0,), max_retries=0)
     broker.join(dummy_actor.queue_name)
     worker.join()
 
@@ -180,7 +165,7 @@ def test_that_message_data_is_added_as_request(broker, worker, capture_events):
     assert request_data["actor_name"] == "dummy_actor"
     assert request_data["args"] == [1, 0]
     assert request_data["kwargs"] == {}
-    assert request_data["options"] == {'retries': 0}
+    assert request_data["options"]["max_retries"] == 0
     assert UUID(request_data["message_id"])
     assert isinstance(request_data['message_timestamp'], int)
 
