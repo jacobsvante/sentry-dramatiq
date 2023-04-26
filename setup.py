@@ -5,7 +5,7 @@ with open('README.md') as f:
 
 setup_kwargs = dict(
     name='sentry_dramatiq',
-    version='0.3.2',
+    version='0.3.3',
     description='Dramatiq task processor integration for the Sentry SDK',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -16,7 +16,7 @@ setup_kwargs = dict(
     license='BSD',
     platforms='any',
     install_requires=[
-        'dramatiq',
+        'dramatiq>=1.9',
         'sentry_sdk',
     ],
     extras_require={
@@ -25,6 +25,7 @@ setup_kwargs = dict(
             'flake8',
             'isort',
             'pytest',
+            'black',
         },
     },
     classifiers=[
