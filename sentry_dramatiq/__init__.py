@@ -10,7 +10,7 @@ from sentry_sdk.integrations import Integration
 from sentry_sdk.utils import (
     AnnotatedValue,
     capture_internal_exceptions,
-    event_from_exception
+    event_from_exception,
 )
 
 
@@ -37,7 +37,7 @@ def _patch_dramatiq_broker():
         integration = hub.get_integration(DramatiqIntegration)
 
         try:
-            middleware = kw.pop('middleware')
+            middleware = kw.pop("middleware")
         except KeyError:
             # Unfortunately Broker and StubBroker allows middleware to be
             # passed in as positional arguments, whilst RabbitmqBroker and
@@ -55,11 +55,12 @@ def _patch_dramatiq_broker():
             middleware = list(middleware)
 
         if integration is not None:
-            assert SentryMiddleware not in (m.__class__ for m in middleware),\
-                "Sentry middleware must not be passed in manually to broker"
+            assert SentryMiddleware not in (
+                m.__class__ for m in middleware
+            ), "Sentry middleware must not be passed in manually to broker"
             middleware.insert(0, SentryMiddleware())
 
-        kw['middleware'] = middleware
+        kw["middleware"] = middleware
         # raise Exception([args, kw])
         original_broker__init__(self, *args, **kw)
 
@@ -85,7 +86,7 @@ class SentryMiddleware(Middleware):
 
         with hub.configure_scope() as scope:
             scope.transaction = message.actor_name
-            scope.set_tag('dramatiq_message_id', message.message_id)
+            scope.set_tag("dramatiq_message_id", message.message_id)
             scope.add_event_processor(
                 _make_message_event_processor(message, integration)
             )
@@ -101,9 +102,11 @@ class SentryMiddleware(Middleware):
         throws = message.options.get("throws") or actor.options.get("throws")
 
         try:
-            if exception is not None and not (
-                throws and isinstance(exception, throws)
-            ) and not isinstance(exception, Retry):
+            if (
+                exception is not None
+                and not (throws and isinstance(exception, throws))
+                and not isinstance(exception, Retry)
+            ):
                 event, hint = event_from_exception(
                     exception,
                     client_options=hub.client.options,
@@ -147,13 +150,13 @@ class DramatiqMessageExtractor(object):
         content_length = self.content_length()
         contexts = event.setdefault("contexts", {})
         request_info = contexts.setdefault("dramatiq", {})
-        request_info['type'] = "dramatiq"
+        request_info["type"] = "dramatiq"
 
         bodies = client.options["request_bodies"]
         if (
             bodies == "never"
-            or (bodies == "small" and content_length > 10 ** 3)
-            or (bodies == "medium" and content_length > 10 ** 4)
+            or (bodies == "small" and content_length > 10**3)
+            or (bodies == "medium" and content_length > 10**4)
         ):
             data = AnnotatedValue(
                 "",
