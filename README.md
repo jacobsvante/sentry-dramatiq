@@ -1,6 +1,6 @@
 # sentry-dramatiq
 
-[![Travis CI build status (Linux)](https://travis-ci.org/jmagnusson/sentry-dramatiq.svg?branch=master)](https://travis-ci.org/jmagnusson/sentry-dramatiq)
+![Github Actions Status](https://github.com/jacobsvante/sentry-dramatiq/actions/workflows/tests.yml/badge.svg)
 [![PyPI version](https://img.shields.io/pypi/v/sentry-dramatiq.svg)](https://pypi.python.org/pypi/sentry-dramatiq/)
 [![License](https://img.shields.io/pypi/l/sentry-dramatiq.svg)](https://pypi.python.org/pypi/sentry-dramatiq/)
 [![Available as wheel](https://img.shields.io/pypi/wheel/sentry-dramatiq.svg)](https://pypi.python.org/pypi/sentry-dramatiq/)
