@@ -24,8 +24,7 @@ class DramatiqIntegration(Integration):
     identifier = "dramatiq"
 
     @staticmethod
-    def setup_once():
-        # type: () -> None
+    def setup_once() -> None:
         _patch_dramatiq_broker()
 
 
@@ -117,11 +116,8 @@ class SentryMiddleware(Middleware):
             message._scope_manager.__exit__(None, None, None)
 
 
-def _make_message_event_processor(message, integration):
-    # type: (Message, DramatiqIntegration) -> Callable
-
-    def inner(event, hint):
-        # type: (Dict[str, Any], Dict[str, Any]) -> Dict[str, Any]
+def _make_message_event_processor(message: Message, integration: DramatiqIntegration) -> Callable:
+    def inner(event: Dict[str, Any], hint: Dict[str, Any]) -> Dict[str, Any]:
         with capture_internal_exceptions():
             DramatiqMessageExtractor(message).extract_into_event(event)
 
@@ -131,21 +127,18 @@ def _make_message_event_processor(message, integration):
 
 
 class DramatiqMessageExtractor(object):
-    def __init__(self, message):
-        # type: (Message) -> None
+    def __init__(self, message: Message) -> None:
         self.message_data = dict(message.asdict())
 
-    def content_length(self):
-        # type: () -> int
+    def content_length(self) -> int:
         return len(json.dumps(self.message_data))
 
-    def extract_into_event(self, event):
-        # type: (Dict[str, Any]) -> None
+    def extract_into_event(self, event: Dict[str, Any]) -> None:
         client = Hub.current.client
         if client is None:
             return
 
-        data = None  # type: Optional[Union[AnnotatedValue, Dict[str, Any]]]
+        data: Optional[Union[AnnotatedValue, Dict[str, Any]]] = None
 
         content_length = self.content_length()
         contexts = event.setdefault("contexts", {})
