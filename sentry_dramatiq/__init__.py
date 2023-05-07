@@ -2,15 +2,15 @@ import json
 from typing import Any, Callable, Dict, Optional, Union
 
 from dramatiq.broker import Broker
+from dramatiq.errors import Retry
 from dramatiq.message import Message
 from dramatiq.middleware import Middleware, default_middleware
-from dramatiq.errors import Retry
 from sentry_sdk import Hub
 from sentry_sdk.integrations import Integration
 from sentry_sdk.utils import (
     AnnotatedValue,
     capture_internal_exceptions,
-    event_from_exception,
+    event_from_exception
 )
 
 
