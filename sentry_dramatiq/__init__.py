@@ -1,11 +1,11 @@
 import json
 from typing import Any, Callable, Dict, Optional, Union
 
+import sentry_sdk
 from dramatiq.broker import Broker
+from dramatiq.errors import Retry
 from dramatiq.message import Message
 from dramatiq.middleware import Middleware, default_middleware
-from dramatiq.errors import Retry
-from sentry_sdk import Hub
 from sentry_sdk.integrations import Integration
 from sentry_sdk.utils import (
     AnnotatedValue,
@@ -33,8 +33,7 @@ def _patch_dramatiq_broker():
     original_broker__init__ = Broker.__init__
 
     def sentry_patched_broker__init__(self, *args, **kw):
-        hub = Hub.current
-        integration = hub.get_integration(DramatiqIntegration)
+        integration = sentry_sdk.get_client().get_integration(DramatiqIntegration)
 
         try:
             middleware = kw.pop("middleware")
@@ -76,24 +75,23 @@ class SentryMiddleware(Middleware):
     """
 
     def before_process_message(self, broker, message):
-        hub = Hub.current
-        integration = hub.get_integration(DramatiqIntegration)
+        integration = sentry_sdk.get_client().get_integration(DramatiqIntegration)
         if integration is None:
             return
 
-        message._scope_manager = hub.push_scope()
+        message._scope_manager = sentry_sdk.push_scope()
         message._scope_manager.__enter__()
 
-        with hub.configure_scope() as scope:
-            scope.transaction = message.actor_name
+        with sentry_sdk.configure_scope() as scope:
+            scope.set_transaction_name(message.actor_name)
             scope.set_tag("dramatiq_message_id", message.message_id)
             scope.add_event_processor(
                 _make_message_event_processor(message, integration)
             )
 
     def after_process_message(self, broker, message, *, result=None, exception=None):
-        hub = Hub.current
-        integration = hub.get_integration(DramatiqIntegration)
+        client = sentry_sdk.get_client()
+        integration = client.get_integration(DramatiqIntegration)
 
         if integration is None:
             return
@@ -109,10 +107,10 @@ class SentryMiddleware(Middleware):
             ):
                 event, hint = event_from_exception(
                     exception,
-                    client_options=hub.client.options,
+                    client_options=client.options,
                     mechanism={"type": "dramatiq", "handled": False},
                 )
-                hub.capture_event(event, hint=hint)
+                sentry_sdk.capture_event(event, hint=hint)
         finally:
             message._scope_manager.__exit__(None, None, None)
 
@@ -141,9 +139,7 @@ class DramatiqMessageExtractor(object):
 
     def extract_into_event(self, event):
         # type: (Dict[str, Any]) -> None
-        client = Hub.current.client
-        if client is None:
-            return
+        client = sentry_sdk.get_client()
 
         data = None  # type: Optional[Union[AnnotatedValue, Dict[str, Any]]]
 
@@ -152,7 +148,7 @@ class DramatiqMessageExtractor(object):
         request_info = contexts.setdefault("dramatiq", {})
         request_info["type"] = "dramatiq"
 
-        bodies = client.options["request_bodies"]
+        bodies = client.options["max_request_body_size"]
         if (
             bodies == "never"
             or (bodies == "small" and content_length > 10**3)

@@ -6,8 +6,9 @@ import dramatiq
 import pytest
 import sentry_sdk
 from dramatiq.brokers.stub import StubBroker
-from sentry_sdk._compat import reraise, string_types
+from sentry_sdk.envelope import Envelope
 from sentry_sdk.transport import Transport
+from sentry_sdk.utils import reraise
 
 from sentry_dramatiq import DramatiqIntegration
 
@@ -15,6 +16,10 @@ SEMAPHORE = "./semaphore"
 
 if not os.path.isfile(SEMAPHORE):
     SEMAPHORE = None
+
+
+def _get_event(envelope: Envelope):
+    return envelope.items[0].payload.json
 
 
 @pytest.fixture(autouse=True)
@@ -32,21 +37,21 @@ def reraise_internal_exceptions(request, monkeypatch):
             reraise(*e)
 
     monkeypatch.setattr(
-        sentry_sdk.Hub, "_capture_internal_exception", _capture_internal_exception
+        sentry_sdk.Scope, "_capture_internal_exception", _capture_internal_exception
     )
 
 
 @pytest.fixture
 def monkeypatch_test_transport(monkeypatch, assert_semaphore_acceptance):
-    def check_event(event):
+    def check_event(envelope: Envelope):
         def check_string_keys(map):
             for key, value in map.items():
-                assert isinstance(key, string_types)
+                assert isinstance(key, (str,))
                 if isinstance(value, dict):
                     check_string_keys(value)
 
-        check_string_keys(event)
-        assert_semaphore_acceptance(event)
+        check_string_keys(_get_event(envelope))
+        assert_semaphore_acceptance(_get_event(envelope))
 
     def inner(client):
         monkeypatch.setattr(client, "transport", TestTransport(check_event))
@@ -96,10 +101,9 @@ def assert_semaphore_acceptance(tmpdir):
 @pytest.fixture
 def sentry_init(monkeypatch_test_transport):
     def inner(*a, **kw):
-        hub = sentry_sdk.Hub.current
         client = sentry_sdk.Client(*a, **kw)
-        hub.bind_client(client)
-        monkeypatch_test_transport(sentry_sdk.Hub.current.client)
+        sentry_sdk.Scope.get_global_scope().set_client(client)
+        monkeypatch_test_transport(client)
 
     return inner
 
@@ -107,22 +111,28 @@ def sentry_init(monkeypatch_test_transport):
 class TestTransport(Transport):
     def __init__(self, capture_event_callback):
         Transport.__init__(self)
-        self.capture_event = capture_event_callback
+        self.capture_envelope = capture_event_callback
         self._queue = None
+
+    def capture_envelope(self, envelope: Envelope) -> None:
+        pass
 
 
 @pytest.fixture
 def capture_events(monkeypatch):
     def inner():
         events = []
-        test_client = sentry_sdk.Hub.current.client
-        old_capture_event = test_client.transport.capture_event
+        test_client = sentry_sdk.get_client()
+        old_capture_envelope = test_client.transport.capture_envelope
 
-        def append(event):
-            events.append(event)
-            return old_capture_event(event)
+        def append_event(envelope):
+            for item in envelope:
+                if item.headers.get("type") in ("event", "transaction"):
+                    events.append(item.payload.json)
+            return old_capture_envelope(envelope)
 
-        monkeypatch.setattr(test_client.transport, "capture_event", append)
+        monkeypatch.setattr(test_client.transport, "capture_envelope", append_event)
+
         return events
 
     return inner
@@ -135,14 +145,14 @@ def capture_events_forksafe(monkeypatch):
         events_r = os.fdopen(events_r, "rb", 0)
         events_w = os.fdopen(events_w, "wb", 0)
 
-        test_client = sentry_sdk.Hub.current.client
+        test_client = sentry_sdk.get_client()
 
-        old_capture_event = test_client.transport.capture_event
+        old_capture_envelope = test_client.transport.capture_event
 
         def append(event):
             events_w.write(json.dumps(event).encode("utf-8"))
             events_w.write(b"\n")
-            return old_capture_event(event)
+            return old_capture_envelope(event)
 
         def flush(timeout=None, callback=None):
             events_w.write(b"flush\n")
@@ -170,7 +180,7 @@ class EventStreamReader(object):
 def capture_exceptions(monkeypatch):
     def inner():
         errors = set()
-        old_capture_event = sentry_sdk.Hub.capture_event
+        old_capture_event = sentry_sdk.capture_event
 
         def capture_event(self, event, hint=None):
             if hint:
@@ -179,7 +189,7 @@ def capture_exceptions(monkeypatch):
                     errors.add(error)
             return old_capture_event(self, event, hint=hint)
 
-        monkeypatch.setattr(sentry_sdk.Hub, "capture_event", capture_event)
+        monkeypatch.setattr(sentry_sdk, "capture_event", capture_event)
         return errors
 
     return inner

@@ -17,7 +17,7 @@ setup_kwargs = dict(
     platforms="any",
     install_requires=[
         "dramatiq>=1.9",
-        "sentry_sdk",
+        "sentry_sdk>=2.0,<3.0",
     ],
     extras_require={
         "test": {
