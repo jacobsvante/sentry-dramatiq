@@ -5,7 +5,7 @@ with open("README.md") as f:
 
 setup_kwargs = dict(
     name="sentry_dramatiq",
-    version="0.3.3",
+    version="0.4.0",
     description="Dramatiq task processor integration for the Sentry SDK",
     long_description=long_description,
     long_description_content_type="text/markdown",
