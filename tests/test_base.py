@@ -36,7 +36,7 @@ def test_that_actor_name_is_set_as_transaction(broker, worker, capture_events):
     assert event["transaction"] == "dummy_actor"
 
 
-def test_that_dramatiq_message_id_is_set_as_tag(broker, worker, capture_events):
+def test_that_message_data_is_added_to_tags(broker, worker, capture_events):
     events = capture_events()
 
     @dramatiq.actor(max_retries=0)
@@ -49,9 +49,14 @@ def test_that_dramatiq_message_id_is_set_as_tag(broker, worker, capture_events):
     worker.join()
 
     event1, event2 = events
-    assert "dramatiq_message_id" in event1["tags"]
-    msg_ids = [e["tags"]["dramatiq_message_id"] for e in events]
-    assert all(UUID(msg_id) and isinstance(msg_id, str) for msg_id in msg_ids)
+    expected_tags = [
+        "dramatiq.actor",
+        "dramatiq.queue",
+        "dramatiq.message_id",
+    ]
+    for tag in expected_tags:
+        assert tag in event1["tags"]
+        assert tag in event2["tags"]
 
 
 def test_that_local_variables_are_captured(broker, worker, capture_events):
@@ -201,3 +206,5 @@ def test_that_retry_exceptions_are_not_captured(broker, worker, capture_events):
     worker.join()
 
     assert events == []
+
+# TODO: add tests for retried messages and distributed traces
