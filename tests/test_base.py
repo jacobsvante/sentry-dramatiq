@@ -3,6 +3,14 @@ from uuid import UUID
 import dramatiq
 import sentry_sdk
 
+from sentry_dramatiq import SentryMiddleware, DramatiqIntegration
+
+
+def test_sentry_is_initialized_after_broker_initialization(initialized_broker, sentry_init):
+    assert SentryMiddleware not in [m.__class__ for m in initialized_broker.middleware]
+    sentry_init(integrations=[DramatiqIntegration()])
+    assert SentryMiddleware in [m.__class__ for m in initialized_broker.middleware]
+
 
 def test_that_a_single_error_is_captured(broker, worker, capture_events):
     events = capture_events()
@@ -207,4 +215,101 @@ def test_that_retry_exceptions_are_not_captured(broker, worker, capture_events):
 
     assert events == []
 
-# TODO: add tests for retried messages and distributed traces
+
+def test_that_unhandled_exceptions_are_captured_per_retry(broker, worker, capture_events):
+    events = capture_events()
+
+    @dramatiq.actor(max_retries=1, min_backoff=100, max_backoff=100)
+    def dummy_actor():
+        raise RuntimeError("unhandled")
+
+    dummy_actor.send()
+    broker.join(dummy_actor.queue_name)
+    worker.join()
+
+    assert len(events) == 2
+
+    event1, event2 = events
+    assert event1["transaction"] == "dummy_actor"
+    exception = event1["exception"]["values"][0]
+    assert exception["type"] == "RuntimeError"
+
+    assert event2["transaction"] == "dummy_actor"
+    exception = event2["exception"]["values"][0]
+    assert exception["type"] == "RuntimeError"
+
+
+def test_that_transaction_is_captured_when_tracing_is_enabled(broker, worker, capture_events):
+    sentry_sdk.get_client().options["traces_sample_rate"] = 1
+    events = capture_events()
+
+    @dramatiq.actor(queue_name="queue")
+    def dummy_actor(a, b):
+        pass
+
+    message = dummy_actor.send("a", b=1)
+    broker.join(dummy_actor.queue_name)
+    worker.join()
+
+    (event,) = events
+    assert event["type"] == "transaction"
+    request_data = event["contexts"]["dramatiq"]["data"]
+    assert request_data["queue_name"] == "queue"
+    assert request_data["actor_name"] == "dummy_actor"
+    assert request_data["args"] == ["a"]
+    assert request_data["kwargs"] == {"b": 1}
+    assert request_data["message_id"] == message.message_id
+
+    assert event["transaction"] == "dummy_actor"
+    tags = event["tags"]
+
+    assert tags["dramatiq.message_id"] == message.message_id
+    assert tags["dramatiq.actor"] == "dummy_actor"
+    assert tags["dramatiq.queue"] == "queue"
+
+
+def test_all_actor_call_are_captured_when_job_is_retried(broker, worker, capture_events):
+    sentry_sdk.get_client().options["traces_sample_rate"] = 1
+    events = capture_events()
+
+    @dramatiq.actor(max_retries=1, min_backoff=100, max_backoff=100)
+    def dummy_actor():
+        raise Exception("failed")
+
+    dummy_actor.send()
+
+    broker.join(dummy_actor.queue_name)
+    worker.join()
+
+    event1, event2, event3, event4 = events
+    for event in events:
+        assert event["transaction"] == "dummy_actor"
+
+    assert event1["exception"]["values"][0]["type"] == "Exception"
+    assert event3["exception"]["values"][0]["type"] == "Exception"
+    assert event2["type"] == "transaction"
+    assert event4["type"] == "transaction"
+
+
+def test_that_transaction_continues_trace(broker, worker, capture_events):
+    sentry_sdk.get_client().options["traces_sample_rate"] = 1
+    events = capture_events()
+
+    @dramatiq.actor()
+    def dummy_actor():
+        pass
+
+    with sentry_sdk.start_transaction(name="parent_transaction", sampled=True):
+        dummy_actor.send()
+
+    broker.join(dummy_actor.queue_name)
+    worker.join()
+
+    event1, event2 = events
+    assert event1["type"] == "transaction"
+    assert event1["transaction"] == "parent_transaction"
+
+    assert event2["type"] == "transaction"
+    assert event2["transaction"] == "dummy_actor"
+
+    assert event1["contexts"]["trace"]["trace_id"] == event2["contexts"]["trace"]["trace_id"]

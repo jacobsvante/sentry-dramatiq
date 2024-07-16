@@ -207,6 +207,16 @@ def broker(sentry_init):
 
 
 @pytest.fixture
+def initialized_broker(sentry_init):
+    broker = StubBroker()
+    broker.emit_after("process_boot")
+    dramatiq.set_broker(broker)
+    yield broker
+    broker.flush_all()
+    broker.close()
+
+
+@pytest.fixture
 def worker(broker):
     worker = dramatiq.Worker(broker, worker_timeout=100, worker_threads=1)
     worker.start()

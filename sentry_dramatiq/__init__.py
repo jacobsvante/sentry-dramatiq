@@ -18,7 +18,6 @@ from sentry_sdk.utils import (
 
 
 # TODO:
-#  - add results storage
 #  - add more readable info about retries
 class DramatiqIntegration(Integration):
     """Dramatiq integration for Sentry"""
