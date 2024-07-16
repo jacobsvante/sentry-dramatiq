@@ -17,8 +17,6 @@ from sentry_sdk.utils import (
 )
 
 
-# TODO:
-#  - add more readable info about retries
 class DramatiqIntegration(Integration):
     """Dramatiq integration for Sentry"""
 
@@ -196,6 +194,14 @@ class DramatiqMessageExtractor(object):
         request_info["actor"] = {
             "options": actor.options,
         }
+
+        retries = self.message.options.get("retries", None)
+        if retries is not None:
+            max_retries = self.message.options.get("max_retries") or actor.options.get("max_retries")
+            request_info["retries"] = {
+                "current": retries,
+                "limit": max_retries,
+            }
 
         tags = event.setdefault("tags", {})
         tags.update({
