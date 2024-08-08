@@ -1,3 +1,5 @@
+DEPRECATION WARNING: This integration has now been [merged into sentry-python](https://github.com/getsentry/sentry-python/pull/3397)
+
 # sentry-dramatiq
 
 [![Travis CI build status (Linux)](https://travis-ci.org/jmagnusson/sentry-dramatiq.svg?branch=master)](https://travis-ci.org/jmagnusson/sentry-dramatiq)
