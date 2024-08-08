@@ -1,4 +1,4 @@
-DEPRECATION WARNING: This integration has now been [merged into sentry-python](https://github.com/getsentry/sentry-python/pull/3397)
+## *DEPRECATION WARNING: This integration has now been [merged into sentry-python](https://github.com/getsentry/sentry-python/pull/3397)*
 
 # sentry-dramatiq
 
